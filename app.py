@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import textwrap
 import os
 
@@ -25,17 +25,29 @@ def index():
     
     return render_template("index.html")
 
-def get_font(font_size):
-    return ImageFont.truetype('impact.ttf', font_size)
 
 def make_meme(input_path, top_text, bottom_text, output_path):
     img = Image.open(input_path)
+    try:
+        exif = img._getexif()
+        if exif:
+            orientation = exif.get(0x0112)
+            if orientation is not None:
+                if orientation == 3:
+                    img = img.rotate(180, expand=True)
+                elif orientation == 6:
+                    img = img.rotate(270, expand=True)
+                elif orientation == 8:
+                    img = img.rotate(90, expand=True)
+    except:
+        pass
+    
     width, height = img.size
     draw = ImageDraw.Draw(img)
     
     def calculate_font_size(text, max_width, max_height):
         for font_size in range(120, 20, -2):
-            font = get_font(font_size)
+            font = 'impact.ttf'
             wrapped = []
             
             for chars in range(10, 30):
@@ -50,7 +62,7 @@ def make_meme(input_path, top_text, bottom_text, output_path):
     if top_text:
         max_height = height * 0.3
         font_size, lines = calculate_font_size(top_text, width * 0.9, max_height)
-        font = get_font(font_size)
+        font = 'impact.ttf'
         
         y = height * 0.03
         for line in lines:
@@ -58,7 +70,7 @@ def make_meme(input_path, top_text, bottom_text, output_path):
             x = (width - line_width) / 2
             draw.text(
                 (x, y), line,
-                fill= 'white', font=font,
+                fill='white', font=font,
                 stroke_width=max(2, font_size//15),
                 stroke_fill='black'
             )
